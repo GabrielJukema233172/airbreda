@@ -1,0 +1,28 @@
+# Secrets - never commit these
+.env
+*.env
+*accessKeys*.csv
+*credentials*
+*.pem
+*.key
+terraform.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Data and models (regenerate instead of committing)
+data/
+*.parquet
+*.pkl
+*.joblib
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
