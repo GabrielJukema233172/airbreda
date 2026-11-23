@@ -22,7 +22,7 @@ What the system has to do with the data:
 
 Volume is small: at hourly resolution, 1 station × 3 components + 4 sites × 2 metrics ≈ **96,000 rows/year**.
 
-Constraints: one engineer, AWS Free plan credits, a 5-day build, and the final system has to run as containers on **one cloud VM** (confirmed with the lecturers: the database runs on the VM too).
+Constraints: one engineer, AWS Free plan credits, a 5-day build. The services must run as containers on a cloud VM; where the database lives (on that VM or in a managed service) is our choice.
 
 ## Options considered
 
@@ -38,7 +38,12 @@ Constraints: one engineer, AWS Free plan credits, a 5-day build, and the final s
 **Option A.**
 
 - **Relational database instead of NoSQL**: the readings are strongly structured, the main queries are `WHERE station_id = … AND timestamp BETWEEN …`, and air and traffic must be joined on time. These are what SQL and a B-tree index on the primary key do well. At ~96k rows/year one small Postgres has decades of headroom.
-- **Self-hosted in a container instead of RDS**: at this size, RDS's managed backups and failover don't justify a second always-on bill or a second machine to secure. Running Postgres next to the ingestion containers keeps the whole system on one VM, as the assignment requires. The database port is bound to `127.0.0.1`, so it is never exposed to the internet; the containers reach it over Docker's internal network.
+- **Self-hosted in a container instead of RDS — chosen for simplicity**: for one engineer, the simplest system to build and operate wins, and at this size RDS's managed backups and failover don't justify the extra setup and bill. In practice this meant:
+  - **No networking to configure.** No security group, no public endpoint, no database host to look up. The containers reach Postgres by its service name `db` over Docker's internal network, and its port is bound to `127.0.0.1`, so it is never exposed to the internet.
+  - **The same setup everywhere.** One `docker-compose.yml` runs identically on the laptop (Day 1) and the EC2 VM (Day 3), so moving to the cloud is copying a folder, not reconfiguring a database connection.
+  - **No extra cost.** Postgres shares the VM instead of billing separately every hour.
+
+  The price is that operating the database is now our job (see Consequences 1–2).
 - **Raw files in object storage (S3)**: each NDW run is saved as `ndw/YYYY-MM-DD/HH-<site>.csv` (date/hour from the *measurement* time, UTC), one row per lane value including the raw value and an `is_valid` flag. S3 is the audit trail and the retraining dataset. Because the database now lives on a single VM disk, S3 also means a lost database can be rebuilt instead of being gone.
 - **Duplicates**: delivery is **at-least-once with idempotent writes**, not exactly-once.
   - Database: primary key `(station_id, timestamp, component)`. Every run re-fetches the last 50 hours, so a missed run heals itself and re-inserting changes nothing.
@@ -65,7 +70,7 @@ RDS (option B) was the managed-database alternative, and it is the first thing w
 **Easier:** fast, simple queries for the API and dashboard; deduplication enforced by the schema; late values corrected automatically; reproducible retraining from S3; zero extra hourly cost; one `docker compose` file from laptop to VM.
 
 **Harder / known limitations (to revisit):**
-1. **Backups are ours.** Nothing backs up the Postgres volume automatically. Plan: a nightly `pg_dump` uploaded to S3 (Day 3), plus S3 raw files as the last resort.
+1. **Backups are ours.** Nothing backs up the Postgres volume automatically. On EC2 the Docker volume sits on the VM's root disk, which AWS deletes by default when the instance is *terminated* (stopping is safe). Plan: a nightly `pg_dump` uploaded to S3 (Day 3), plus S3 raw files as the last resort.
 2. **Single point of failure.** One VM runs everything; if it stops, ingestion and the API both stop. Acceptable for a demo, not for a public service.
 3. **Corrections to real values are ignored.** If Luchtmeetnet revises an already-published value (e.g. after validation), we keep the first one. Revisit if validated data matters to the model.
 4. **NDW parsing is heavy.** The 160 MB site-config XML is parsed once per site (4×) every run. It changes rarely, so it could be cached daily.

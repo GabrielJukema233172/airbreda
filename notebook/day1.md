@@ -8,7 +8,7 @@
 
 Pointers: cost surprises for teams who never saw a compute bill · compliance/data protection for customer data · 200+ team accounts = 200 ways to misconfigure IAM · vs. excitement: teams ship without waiting for the data-centre team, scale for sales peaks without buying hardware.
 
-My answer:
+My answer: I would have been excited for the ease of scale especially for an online retailer, traffic varies widely during peak hours or black friday for instance. My biggest concern would have been reliance on an outside service. No control over pricing and cost if something ran wrong or too long, also concern about moving away from the provider later on.
 
 ## FinOps estimation exercise
 Cluster runs 24/7 (€500/month) for a job that only runs 08:00–20:00.
@@ -36,14 +36,14 @@ At 14:15 Dutch time (13:15 UTC) the newest NO₂ value was for the hour ending 1
 
 Pointers: signals — CPU/IO saturation, query latency p95 creeping up, replication lag on read replicas, connection count near the limit, disk growth rate, vacuum falling behind. Scale is less "N rows" and more "write rate + query mix": Spotify broke on hundreds of thousands of events per second.
 
-My answer:
+My answer:It is not really about the single postgres instance by itself, but also the fact that everything was being sent to one central cluster, so if that went down, the whole service went with it. A Postgres server can hold billions of rows. It becomes the wrong answer when the workload outgrows one machine or one central point. 
 
 ## ADR reflection ✍️
 *What architectural decision from today would you be least confident defending in a design review?*
 
 Candidates from ADR-0001's "known limitations": running our own Postgres instead of managed RDS (backups are now our job) · deviating from the lab's `DO NOTHING` · parsing 160 MB of XML four times per run · one NDW snapshot per hour.
 
-My answer:
+My answer: Postgres on the VM instead of RDS. Objection might be: No automatic backups; one VM is a single point of failure for both the API and the data. Rebuttal: Saves credits, and the raw files in S3 allow a rebuild. What would change it: Real users depend on uptime, or data that can't be rebuilt from S3.
 
 ## Wrap-up questions
 
