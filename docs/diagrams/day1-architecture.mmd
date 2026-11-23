@@ -1,0 +1,32 @@
+flowchart LR
+    subgraph SRC["Open data sources (no API key)"]
+        LMN["RIVM Luchtmeetnet API<br/>NO₂ · station NL10240<br/>hourly JSON"]
+        NDW["NDW Open Data<br/>flow + speed · 4 A27 sites<br/>per-minute gzipped DATEX II XML"]
+    end
+
+    subgraph LAPTOP["Docker on laptop (Day 1) → EC2 VM (Day 3)"]
+        AIR["ingest_air<br/>container"]
+        TRF["ingest_traffic<br/>container"]
+    end
+
+    subgraph AWS["AWS · eu-central-1 (Frankfurt)"]
+        SG{{"Security group<br/>5432 from my IP only"}}
+        RDS[("RDS PostgreSQL<br/>db.t4g.micro<br/>sensor_readings<br/>PK station, timestamp, component")]
+        S3[("S3 bucket<br/>ndw/YYYY-MM-DD/HH-site.csv<br/>raw parsed files · audit trail")]
+    end
+
+    subgraph LATER["Planned (Days 2–5)"]
+        ML["Regression model<br/>NO₂ prediction"]
+        APIDASH["GET /site/{id} · GET /health<br/>dashboard"]
+    end
+
+    LMN -- "HTTPS, last 50 h<br/>retry ×3" --> AIR
+    NDW -- "HTTP, 2 files<br/>retry ×3" --> TRF
+    AIR -- "INSERT … ON CONFLICT<br/>DO NOTHING" --> SG --> RDS
+    TRF -- "upload CSV<br/>(same key = overwrite)" --> S3
+    S3 -. "retraining data" .-> ML
+    RDS -. "recent readings" .-> APIDASH
+    ML -. "prediction" .-> APIDASH
+
+    classDef planned stroke-dasharray: 5 5,color:#666;
+    class ML,APIDASH planned

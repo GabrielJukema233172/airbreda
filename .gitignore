@@ -26,3 +26,6 @@ data/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Local output of ingest_traffic.py (the real copy lives in S3)
+output/

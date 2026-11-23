@@ -6,12 +6,15 @@ _What the system does and for whom._
 ## 2. Architecture diagram
 _Updated at the end of every day._
 
-<!-- ![Architecture](diagrams/architecture.png) -->
+### Day 1 — initial design
+![AirBreda architecture after Day 1](diagrams/day1-architecture.svg)
+
+Solid lines exist today; dashed boxes and lines are planned for Days 2–5.
 
 ## 3. Architecture Decision Records
 | # | Decision | Status |
 |---|---|---|
-| [0001](adr/0001-example.md) | _Day 1 decision_ | Proposed |
+| [0001](adr/0001-initial-data-storage-strategy.md) | Initial data storage strategy: RDS PostgreSQL + S3, idempotent writes | Accepted |
 
 ## 4. Cloud provider rationale (for the municipality)
 _Plain-language explanation of why AWS, written for a non-technical reader._
