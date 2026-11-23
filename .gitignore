@@ -29,3 +29,4 @@ Thumbs.db
 
 # Local output of ingest_traffic.py (the real copy lives in S3)
 output/
+!.env.example

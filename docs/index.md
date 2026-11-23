@@ -14,7 +14,7 @@ Solid lines exist today; dashed boxes and lines are planned for Days 2–5.
 ## 3. Architecture Decision Records
 | # | Decision | Status |
 |---|---|---|
-| [0001](adr/0001-initial-data-storage-strategy.md) | Initial data storage strategy: RDS PostgreSQL + S3, idempotent writes | Accepted |
+| [0001](adr/0001-initial-data-storage-strategy.md) | Initial data storage strategy: PostgreSQL in a container + S3, idempotent writes | Accepted |
 
 ## 4. Cloud provider rationale (for the municipality)
 _Plain-language explanation of why AWS, written for a non-technical reader._

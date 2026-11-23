@@ -9,6 +9,7 @@ Builds on get_latest_no2() from scripts/getNO2Readings.py.
 
     python ingest_air.py                 # Lab 1: print the latest reading
     DATABASE_URL=postgresql://... python ingest_air.py   # Lab 2: also store
+    docker compose run --rm air          # Lab 2 with the Postgres container
 
 CAP trade-off (required comment)
 --------------------------------
@@ -29,9 +30,8 @@ How a production pipeline should handle missing or null values:
     monitoring, /health endpoint on Day 5).
   * Re-fetch a window of recent hours (the last 50) on every run, so an hour
     that was missing entirely - e.g. because our job or the API was down - is
-    filled in on the next run. Limitation: with ON CONFLICT DO NOTHING, an
-    hour first stored as NULL is NOT updated if the source fills it in later
-    (see ADR-001 for the fix we would make).
+    inserted on the next run, and an hour first stored as NULL is filled in
+    once the source publishes the late value (see INSERT_SQL below).
   * Treat an empty response as a failure to alert on, not as "no data".
 """
 
@@ -145,20 +145,30 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
 );
 """
 
-# Idempotent write: the primary key makes a duplicate impossible, and
-# ON CONFLICT DO NOTHING turns "insert the same reading again" into a no-op.
-# That is what lets us use at-least-once delivery (re-fetch the last 50 hours
-# every run) without ever creating duplicate rows.
+# Idempotent write: the primary key makes a duplicate row impossible, so we can
+# use at-least-once delivery (re-fetch the last 50 hours every run) safely.
+#
+# Deliberate deviation from the lab's ON CONFLICT DO NOTHING (see ADR-0001):
+# DO NOTHING would keep a NULL forever, even after Luchtmeetnet publishes the
+# late value. Here a conflicting row is updated ONLY when the stored value is
+# NULL and the new one is not. Every other conflict is still a no-op, so running
+# the script twice changes nothing - it stays idempotent - and a real
+# measurement is never overwritten.
+#
+# RETURNING (xmax = 0) is a PostgreSQL detail: true for a freshly inserted row,
+# false for an updated one. Skipped rows return nothing.
 INSERT_SQL = """
-INSERT INTO sensor_readings (station_id, timestamp, component, value)
+INSERT INTO sensor_readings AS s (station_id, timestamp, component, value)
 VALUES %s
-ON CONFLICT (station_id, timestamp, component) DO NOTHING
-RETURNING 1;
+ON CONFLICT (station_id, timestamp, component) DO UPDATE
+    SET value = EXCLUDED.value
+    WHERE s.value IS NULL AND EXCLUDED.value IS NOT NULL
+RETURNING (xmax = 0) AS inserted;
 """
 
 
-def write_to_db(df: pd.DataFrame, database_url: str) -> int:
-    """Insert rows; return how many were new."""
+def write_to_db(df: pd.DataFrame, database_url: str) -> tuple[int, int]:
+    """Upsert rows; return (rows inserted, NULL rows filled in)."""
     import psycopg2  # imported here so Lab 1 runs without a database driver
     from psycopg2.extras import execute_values
 
@@ -168,9 +178,9 @@ def write_to_db(df: pd.DataFrame, database_url: str) -> int:
     ]
     with psycopg2.connect(database_url, connect_timeout=10) as conn, conn.cursor() as cur:
         cur.execute(CREATE_TABLE_SQL)
-        # RETURNING only yields rows that were actually inserted (not skipped)
-        inserted = execute_values(cur, INSERT_SQL, rows, fetch=True)
-    return len(inserted)
+        result = execute_values(cur, INSERT_SQL, rows, fetch=True)
+    inserted = sum(1 for (is_new,) in result if is_new)
+    return inserted, len(result) - inserted
 
 
 # --------------------------------------------------------------------------- #
@@ -205,11 +215,12 @@ def main() -> int:
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
         try:
-            inserted = write_to_db(df, database_url)
+            inserted, filled = write_to_db(df, database_url)
         except Exception as exc:  # noqa: BLE001 - report any DB failure the same way
             log.error("Database write failed: %s", exc)
             return 1
-        print(f"Database:  {inserted} new rows inserted, {len(df) - inserted} already present")
+        unchanged = len(df) - inserted - filled
+        print(f"Database:  {inserted} inserted, {filled} NULLs filled in, {unchanged} unchanged")
     else:
         print("Database:  skipped (DATABASE_URL not set)")
     return 0

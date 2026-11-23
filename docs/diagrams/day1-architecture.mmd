@@ -4,15 +4,14 @@ flowchart LR
         NDW["NDW Open Data<br/>flow + speed · 4 A27 sites<br/>per-minute gzipped DATEX II XML"]
     end
 
-    subgraph LAPTOP["Docker on laptop (Day 1) → EC2 VM (Day 3)"]
-        AIR["ingest_air<br/>container"]
-        TRF["ingest_traffic<br/>container"]
+    subgraph HOST["Docker host — laptop (Day 1) → EC2 VM (Day 3) · docker-compose.yml"]
+        AIR["air<br/>ingest_air.py"]
+        TRF["traffic<br/>ingest_traffic.py"]
+        DB[("db · PostgreSQL 16<br/>sensor_readings<br/>PK station, timestamp, component<br/>volume pgdata · port 127.0.0.1 only")]
     end
 
     subgraph AWS["AWS · eu-central-1 (Frankfurt)"]
-        SG{{"Security group<br/>5432 from my IP only"}}
-        RDS[("RDS PostgreSQL<br/>db.t4g.micro<br/>sensor_readings<br/>PK station, timestamp, component")]
-        S3[("S3 bucket<br/>ndw/YYYY-MM-DD/HH-site.csv<br/>raw parsed files · audit trail")]
+        S3[("S3 bucket · private<br/>ndw/YYYY-MM-DD/HH-site.csv<br/>raw parsed files · audit trail")]
     end
 
     subgraph LATER["Planned (Days 2–5)"]
@@ -22,10 +21,10 @@ flowchart LR
 
     LMN -- "HTTPS, last 50 h<br/>retry ×3" --> AIR
     NDW -- "HTTP, 2 files<br/>retry ×3" --> TRF
-    AIR -- "INSERT … ON CONFLICT<br/>DO NOTHING" --> SG --> RDS
+    AIR -- "upsert: insert new,<br/>fill NULLs only" --> DB
     TRF -- "upload CSV<br/>(same key = overwrite)" --> S3
-    S3 -. "retraining data" .-> ML
-    RDS -. "recent readings" .-> APIDASH
+    S3 -. "retraining data<br/>+ rebuild if DB lost" .-> ML
+    DB -. "recent readings" .-> APIDASH
     ML -. "prediction" .-> APIDASH
 
     classDef planned stroke-dasharray: 5 5,color:#666;

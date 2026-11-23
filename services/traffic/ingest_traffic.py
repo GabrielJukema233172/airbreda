@@ -17,7 +17,7 @@ as ndw_parser.py so the Docker image is self-contained).
 
 Why both a database AND a bucket? (required comment)
 ----------------------------------------------------
-* The relational database (RDS Postgres) holds parsed, cleaned rows with a
+* The relational database (PostgreSQL) holds parsed, cleaned rows with a
   primary key and an index on (station, timestamp). It answers questions
   like "NO2 and traffic at NL10240 for the last 24 hours" in milliseconds,
   and it can JOIN air quality with traffic. That is what the API and the

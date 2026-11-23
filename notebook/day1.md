@@ -41,7 +41,7 @@ My answer:
 ## ADR reflection ✍️
 *What architectural decision from today would you be least confident defending in a design review?*
 
-Candidates from ADR-0001's "known limitations": `DO NOTHING` ignoring late corrections · the database being publicly reachable · parsing 160 MB of XML four times per run · one NDW snapshot per hour.
+Candidates from ADR-0001's "known limitations": running our own Postgres instead of managed RDS (backups are now our job) · deviating from the lab's `DO NOTHING` · parsing 160 MB of XML four times per run · one NDW snapshot per hour.
 
 My answer:
 

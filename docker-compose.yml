@@ -1,0 +1,48 @@
+# AirBreda - all services on one Docker host.
+# Day 1: your laptop. Day 3: the same file on the EC2 VM.
+#
+#   docker compose up -d db          # start Postgres (keeps running)
+#   docker compose run --rm air      # one ingestion run: Luchtmeetnet -> Postgres
+#   docker compose run --rm traffic  # one ingestion run: NDW -> CSV -> S3
+#
+# Secrets come from a .env file next to this one (see .env.example).
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: airbreda
+      POSTGRES_USER: airbreda
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data                       # data survives container restarts
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro   # runs on first start only
+    ports:
+      - "127.0.0.1:5432:5432"   # reachable from this machine only, never from the internet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airbreda -d airbreda"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  air:
+    build: ./services/air
+    environment:
+      DATABASE_URL: postgresql://airbreda:${POSTGRES_PASSWORD}@db:5432/airbreda
+    depends_on:
+      db:
+        condition: service_healthy
+
+  traffic:
+    build: ./services/traffic
+    environment:
+      S3_BUCKET: ${S3_BUCKET:-}
+      AWS_REGION: eu-central-1
+    volumes:
+      # Laptop only: lend the container your AWS CLI credentials, read-only.
+      # On EC2 (Day 3) an IAM role replaces this - no keys on the VM.
+      - ${AWS_CONFIG_DIR:-~/.aws}:/root/.aws:ro
+
+volumes:
+  pgdata:
