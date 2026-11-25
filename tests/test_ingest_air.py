@@ -59,22 +59,13 @@ def test_fetch_retries_then_raises_when_api_unreachable(monkeypatch):
     assert len(calls) == ingest_air.MAX_ATTEMPTS
 
 
-def test_main_returns_error_code_when_api_down(monkeypatch):
-    def boom(*a, **k):
+def test_cycle_fails_cleanly_when_api_down(monkeypatch):
+    from common.observability import ServiceState
+
+    def boom():
         raise ingest_air.AirApiError("down")
 
-    monkeypatch.setattr(ingest_air, "fetch_measurements", boom)
-    assert ingest_air.main() == 1
-
-
-def test_main_reports_insert_fill_and_unchanged_counts(monkeypatch, capsys):
-    records = [
-        {"formula": "NO2", "timestamp_measured": "2026-11-23T13:00:00+00:00", "value": 22.61},
-        {"formula": "NO2", "timestamp_measured": "2026-11-23T12:00:00+00:00", "value": 27.52},
-        {"formula": "NO2", "timestamp_measured": "2026-11-23T11:00:00+00:00", "value": 38.69},
-    ]
-    monkeypatch.setattr(ingest_air, "fetch_measurements", lambda: records)
-    monkeypatch.setattr(ingest_air, "write_to_db", lambda df, url: (1, 1))
-    monkeypatch.setenv("DATABASE_URL", "postgresql://unused")
-    assert ingest_air.main() == 0
-    assert "1 inserted, 1 NULLs filled in, 1 unchanged" in capsys.readouterr().out
+    state = ServiceState("Luchtmeetnet", ingest_air.log, poll_interval=3600)
+    ingester = ingest_air.AirIngester(state, fetch=boom)
+    assert ingester.run_cycle() is False
+    assert state.last_successful_fetch is None

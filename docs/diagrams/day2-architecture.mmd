@@ -1,0 +1,41 @@
+flowchart LR
+    subgraph SRC["Open data sources"]
+        LMN["RIVM Luchtmeetnet API<br/>NO₂ · NL10240 · hourly"]
+        NDW["NDW Open Data<br/>4 A27 sites · per minute"]
+    end
+
+    subgraph HOST["Docker host · network 'airbreda' · laptop now → EC2 VM (Day 3)"]
+        AIR["air-ingest<br/>poll hourly · last 50 h<br/>flag stale/null"]
+        TRF["traffic-ingest<br/>poll hourly<br/>skip -1 values"]
+        REDIS[["redis · list 'readings'<br/>append-only · capped 10k"]]
+        DB[("db · PostgreSQL 16<br/>sensor_readings<br/>+ is_flagged")]
+        H1(["GET /health :8001"])
+        H2(["GET /health :8002"])
+        LOGS[/"Structured JSON logs → stdout<br/>INFO: fetch_success · db_write · queue_publish<br/>WARNING: DATA_QUALITY_ERROR · queue_publish_failed<br/>ERROR: fetch_failed · BAD_DATA_THRESHOLD_EXCEEDED"/]
+    end
+
+    subgraph AWS["AWS · eu-central-1"]
+        S3[("S3 · ndw/YYYY-MM-DD/HH-site.csv<br/>raw values incl. -1")]
+    end
+
+    subgraph LATER["Planned (Days 3–5)"]
+        CONS["Consumers:<br/>DB writer · ML inference"]
+        CW["CloudWatch / alert on<br/>ERROR events"]
+    end
+
+    LMN --> AIR
+    NDW --> TRF
+    AIR -- "upsert, flagged rows kept" --> DB
+    TRF -- "flow + speed totals<br/>(no -1)" --> DB
+    TRF -- "raw CSV" --> S3
+    AIR -- "RPUSH new/changed" --> REDIS
+    TRF -- "RPUSH 1 msg/site" --> REDIS
+    AIR -.-> H1
+    TRF -.-> H2
+    AIR -. "logs" .-> LOGS
+    TRF -. "logs" .-> LOGS
+    REDIS -. "LPOP / Streams" .-> CONS
+    LOGS -. "ship + alarm" .-> CW
+
+    classDef planned stroke-dasharray: 5 5,color:#666;
+    class CONS,CW planned

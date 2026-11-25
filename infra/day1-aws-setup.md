@@ -1,5 +1,9 @@
 # Day 1 — setup and run steps
 
+> **Superseded for running the stack:** from Day 2 the services are called `air-ingest` and
+> `traffic-ingest` and run continuously. Use [day2-run.md](day2-run.md). The S3 bucket
+> steps below are still valid.
+
 All commands are **PowerShell**, run from the **`airbreda`** folder
 (`cd "C:\Users\gabri\Downloads\Elective 2\airbreda"`).
 

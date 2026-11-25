@@ -8,9 +8,10 @@ Built for the System Design & Cloud Platforms elective (ADSAI, BUas). Cloud prov
 
 | Path | What it holds |
 |---|---|
-| `services/air/` | `ingest_air.py` + Dockerfile: Luchtmeetnet NO₂ → PostgreSQL |
-| `services/traffic/` | `ingest_traffic.py` + Dockerfile: NDW traffic → CSV → S3 |
-| `docker-compose.yml` | Postgres + both ingestion services on one Docker host (laptop now, EC2 VM from Day 3) |
+| `services/common/` | Shared code: JSON logging, data-quality counters, `/health`, Postgres upsert, Redis publisher |
+| `services/air/` | `ingest_air.py` + Dockerfile: Luchtmeetnet NO₂ → PostgreSQL + Redis, `/health` on :8001 |
+| `services/traffic/` | `ingest_traffic.py` + Dockerfile: NDW traffic → CSV/S3 + PostgreSQL + Redis, `/health` on :8002 |
+| `docker-compose.yml` | Postgres, Redis and both ingestion services on one Docker host (laptop now, EC2 VM from Day 3) |
 | `tests/` | pytest suite (`pytest` from the repo root) |
 | `sql/` | Database schema |
 | `infra/` | Step-by-step setup and run commands |

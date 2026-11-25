@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-# Each service lives in its own folder (one Docker image each);
-# this lets the tests import them by module name.
-pythonpath = ["services/air", "services/traffic"]
+# Each service lives in its own folder (one Docker image each) and both use
+# the shared services/common package; this lets the tests import them all.
+pythonpath = ["services", "services/air", "services/traffic"]
 testpaths = ["tests"]
