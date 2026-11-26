@@ -4,7 +4,7 @@ Cloud platform that ingests live NO₂ readings (RIVM Luchtmeetnet, station NL10
 
 Built for the System Design & Cloud Platforms elective (ADSAI, BUas). Cloud provider: **AWS** (region eu-north-1, Stockholm: the only region the account's organization policy allows; see ADR-0004).
 
-Since Day 3 the stack runs on an EC2 VM: see [infra/day3-aws-setup.md](infra/day3-aws-setup.md). Since Day 4 the dashboard runs there too, at `http://13.53.194.127:8000` (open to allowed IPs only): see [infra/day4-deploy.md](infra/day4-deploy.md).
+Since Day 3 the stack runs on an EC2 VM: see [infra/day3-aws-setup.md](infra/day3-aws-setup.md). Since Day 4 the dashboard runs there too, at **http://16.192.119.40:8000** (Elastic IP; public until the Day 5 evaluation): see [infra/day4-deploy.md](infra/day4-deploy.md).
 
 ## Repository layout
 

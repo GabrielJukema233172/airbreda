@@ -8,21 +8,22 @@ All laptop commands are **PowerShell**, run from the `airbreda` folder. Commands
 | Resource | Name / ID | Notes |
 |---|---|---|
 | Region | **eu-north-1** (Stockholm) | The only region the account's organization policy (SCP) allows for EC2/RDS |
-| EC2 instance | `airbreda-vm` · `i-0dd1b70fd3b8badb5` · **13.53.194.127** | t3.small, Amazon Linux 2023, 20 GB gp3, termination protection on, CPU credits *standard* |
+| EC2 instance | `airbreda-vm` · `i-0dd1b70fd3b8badb5` · **16.192.119.40** | t3.small, Amazon Linux 2023, 20 GB gp3, termination protection on, CPU credits *standard* |
+| Elastic IP | `airbreda-vm-eip` · `eipalloc-0d59a0f26157f73cf` · **16.192.119.40** | Attached 26 Nov (before that: 13.53.194.127, which changed on every stop/start). Same $0.005/h as any public IPv4 while attached, **but it keeps billing if the VM is stopped or the IP is detached**: release it when the project ends |
 | Key pair | `airbreda-day3` → `C:\Users\gabri\.ssh\airbreda-day3.pem` | ed25519; readable only by you. Never commit it (`*.pem` is git-ignored) |
-| Security group | `airbreda-vm-sg` · `sg-00f41cf700c384efa` | Inbound **TCP 22**, and from Day 4 **TCP 8000** (dashboard), from the owner's two IPs only: 86.80.42.249/32 and 145.101.245.100/32 |
+| Security group | `airbreda-vm-sg` · `sg-00f41cf700c384efa` | Inbound **TCP 22 from the owner's two IPs only** (86.80.42.249/32, 145.101.245.100/32). **TCP 8000** (dashboard): the same two IPs, plus **0.0.0.0/0 from 26 Nov until the Day 5 evaluation** (closing it: [day4-deploy.md §6](day4-deploy.md)) |
 | S3 bucket | `airbreda-raw-730631` | Public access blocked; `ndw/…` raw CSVs, `backups/postgres/…` nightly dumps |
 | IAM role | `airbreda-ec2-role` (+ instance profile `airbreda-ec2-profile`) | Inline policy [`aws/airbreda-s3-policy.json`](aws/airbreda-s3-policy.json): Put/Get on `ndw/*` and `backups/*` only |
 | Budget | `airbreda-monthly` | $11 (≈ €10)/month, email at 80% actual and 100% forecast |
 
-> The public IP changes if the instance is **stopped and started**. Check it with
-> `aws ec2 describe-instances --region eu-north-1 --instance-ids i-0dd1b70fd3b8badb5 --query "Reservations[0].Instances[0].PublicIpAddress" --output text`
+> Since 26 Nov the VM has an **Elastic IP**, so its address stays 16.192.119.40 across
+> stop/start. (Without one, AWS hands out a new public IP on every start.)
 
 ## Daily use
 
 ```powershell
 # Connect (Windows OpenSSH)
-ssh -i $env:USERPROFILE\.ssh\airbreda-day3.pem ec2-user@13.53.194.127
+ssh -i $env:USERPROFILE\.ssh\airbreda-day3.pem ec2-user@16.192.119.40
 ```
 
 ```bash
@@ -51,8 +52,8 @@ aws ec2 authorize-security-group-ingress --region eu-north-1 --group-id sg-00f41
 ```powershell
 # On the laptop: package what the VM needs (no docker-compose.yml, no Redis)
 tar czf $env:TEMP\airbreda-vm.tgz --exclude=__pycache__ services sql infra/vm .gitattributes
-scp -i $env:USERPROFILE\.ssh\airbreda-day3.pem $env:TEMP\airbreda-vm.tgz ec2-user@13.53.194.127:~/
-ssh -i $env:USERPROFILE\.ssh\airbreda-day3.pem ec2-user@13.53.194.127 "tar xzf ~/airbreda-vm.tgz -C ~/airbreda && ~/airbreda/infra/vm/deploy.sh"
+scp -i $env:USERPROFILE\.ssh\airbreda-day3.pem $env:TEMP\airbreda-vm.tgz ec2-user@16.192.119.40:~/
+ssh -i $env:USERPROFILE\.ssh\airbreda-day3.pem ec2-user@16.192.119.40 "tar xzf ~/airbreda-vm.tgz -C ~/airbreda && ~/airbreda/infra/vm/deploy.sh"
 ```
 
 [`vm/deploy.sh`](vm/deploy.sh) rebuilds both images, keeps the `db` container and its
@@ -194,6 +195,14 @@ Expected ≈ $0.70/day (≈ $21/month) while the VM runs, all paid from the Free
 ## Stop / clean up
 
 ```powershell
-aws ec2 stop-instances  --region eu-north-1 --instance-ids i-0dd1b70fd3b8badb5   # data kept; new public IP on start
+aws ec2 stop-instances  --region eu-north-1 --instance-ids i-0dd1b70fd3b8badb5   # data kept; Elastic IP stays
 aws ec2 start-instances --region eu-north-1 --instance-ids i-0dd1b70fd3b8badb5
+```
+
+After the course, release the Elastic IP. It bills even while the VM is stopped, and
+releasing it gives the address back to AWS for good:
+
+```powershell
+aws ec2 disassociate-address --region eu-north-1 --association-id eipassoc-04aace55eda25b2b8
+aws ec2 release-address      --region eu-north-1 --allocation-id  eipalloc-0d59a0f26157f73cf
 ```

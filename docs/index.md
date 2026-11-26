@@ -27,7 +27,9 @@ What actually runs today: one EC2 `t3.small` in **eu-north-1** (the only region 
 A third application container, `dashboard` (FastAPI), joins the ingesters on the same VM. It serves `GET /` (HTML), `GET /site/{id}` and an aggregated `GET /health` on port 8000, which is open to the owner's IPs only. Each request reads:
 - the latest NO₂ from Postgres, through a SELECT-only login;
 - the latest traffic per site from S3, through the narrowed IAM role;
-- a prediction from `model.pkl`, a linear regression trained offline on 17 joined hours and baked into the image.
+- a prediction from `model.pkl`, a linear regression trained offline on the joined hours collected so far (17 on Day 4; retrained with `infra/retrain.ps1`) and baked into the image.
+
+The dashboard is publicly reachable at **http://16.192.119.40:8000** (Elastic IP) for the Day 5 evaluation.
 
 The HTML page is a client of `/site/{id}`. If the model fails, the API still returns the measured values (ADR-0006).
 

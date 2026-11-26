@@ -5,7 +5,7 @@ VM details and SSH: [day3-aws-setup.md](day3-aws-setup.md). Why: [ADR-0005](../d
 [ADR-0006](../docs/adr/0006-ml-serving-architecture.md).
 
 ```powershell
-$Key = "$env:USERPROFILE\.ssh\airbreda-day3.pem"; $Vm = "ec2-user@13.53.194.127"
+$Key = "$env:USERPROFILE\.ssh\airbreda-day3.pem"; $Vm = "ec2-user@16.192.119.40"
 ```
 
 ## 1. Build the training data (on the VM, where the database is)
@@ -66,15 +66,22 @@ ssh -i $Key $Vm "tar xzf ~/airbreda-vm.tgz -C ~/airbreda && cd ~/airbreda && inf
 
 The dashboard gets only `DASHBOARD_DATABASE_URL`, `S3_BUCKET` and the region, never the owner password.
 
-Open **http://13.53.194.127:8000** from an allowed IP.
+Open **http://16.192.119.40:8000** (Elastic IP, fixed since 26 Nov).
 
 ## 6. Who may reach port 8000
 
+Since 26 Nov port 8000 is open to **everyone** (`0.0.0.0/0`) so the grader can reach it on
+Day 5. The rules for the owner's two IPs stay in place, so closing it again is one command:
+
 ```powershell
 aws ec2 describe-security-groups --region eu-north-1 --group-ids sg-00f41cf700c384efa --query "SecurityGroups[0].IpPermissions[].[FromPort,IpRanges[].CidrIp]" --output text
-# allow one more IP (e.g. the grader's on Day 5):
+# after the evaluation: close it to the public again (your own IPs keep access)
+aws ec2 revoke-security-group-ingress --region eu-north-1 --group-id sg-00f41cf700c384efa --protocol tcp --port 8000 --cidr 0.0.0.0/0
+# or allow just one more IP
 aws ec2 authorize-security-group-ingress --region eu-north-1 --group-id sg-00f41cf700c384efa --protocol tcp --port 8000 --cidr <ip>/32
 ```
+
+SSH (22) is **not** opened to the public: only your two IPs.
 
 ## 7. Checks
 

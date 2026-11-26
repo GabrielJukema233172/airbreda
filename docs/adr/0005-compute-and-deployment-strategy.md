@@ -52,7 +52,13 @@ We chose this over a systemd unit per container: a systemd unit would add orderi
 Resource limits keep one container from starving the others: `db` 384 MB, `air-ingest` 256 MB, `traffic-ingest` 1 GB, `dashboard` 384 MB.
 
 ### Exposure and least privilege
-- **Network:** the dashboard is the only container with a port on the VM's public interface (`0.0.0.0:8000`). The security group allows 8000 only from the developer's two IPs. For the Day 5 evaluation the grader's IP (or `0.0.0.0/0` for the day) will have to be added. The data is public open data, but the endpoint has no authentication and no HTTPS, so it shouldn't stay open to the world by default.
+- **Network:** the dashboard is the only container with a port on the VM's public interface (`0.0.0.0:8000`). On Day 4 the security group allowed 8000 only from the developer's two IPs. **For the Day 5 evaluation it is open to `0.0.0.0/0`** (from 26 Nov), because the grader's IP isn't known in advance. Why that is acceptable *temporarily*:
+  - the data is public open data;
+  - the container can only read the database;
+  - SSH stays restricted;
+  - the dashboard has a fixed Elastic IP (16.192.119.40).
+
+  Why it shouldn't stay that way: the endpoint has no authentication, no HTTPS and no rate limiting, so anyone scanning the internet can load the small VM. The public rule is a separate entry next to the developer's two IPs, so closing it again after the evaluation is a single `revoke-security-group-ingress` (`infra/day4-deploy.md` §6).
 - **Database:** the dashboard logs in as **`dashboard_ro`**, which may only `SELECT` from `sensor_readings` (`sql/dashboard_role.sql`). It is *not* given the owner's `DATABASE_URL`/`POSTGRES_PASSWORD`: `deploy.sh` passes it four named variables instead of `--env-file .env`. Tested: `DELETE` and `CREATE TABLE` return `permission denied`.
 - **S3 / IAM:** the lab's Day 4 step ("replace `AmazonS3FullAccess` with `PutObject`/`GetObject` on just your bucket") was done on Day 3, and narrower: the role may only `Put`/`Get` under `ndw/*` and `backups/*`, and `ListBucket` only for those prefixes. The dashboard needed no change: it uses `ListBucket` (prefix `ndw/YYYY-MM-DD/`) and `GetObject` on `ndw/*`. The ingesters still wrote successfully after deploying, and nothing failed with `AccessDenied`. **Remaining gap:** on plain EC2, every container shares the instance role, so the dashboard *could* write to `ndw/`. Per-container roles need ECS task roles. That is one more argument for ECS once we leave the single VM.
 

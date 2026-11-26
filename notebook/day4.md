@@ -45,7 +45,7 @@ My reflection on the coefficients ✍️:
 ## Lab 2 — dashboard
 
 - Local Compose test: `http://localhost:8000` showed real numbers on the first run (NO₂ 17.0 measured, 18.8 predicted, 4,920 veh/h).
-- VM: **http://13.53.194.127:8000** (port 8000 open to the owner's two IPs only).
+- VM: **http://16.192.119.40:8000** (Elastic IP; port 8000 public until the Day 5 evaluation, SSH owner-only).
 - Refresh every 60 s; "last updated" times plus a warning banner if traffic is > 90 min or NO₂ > 3 h old.
 - Read-only DB login for the dashboard; IAM was already scoped on Day 3 and needed no change (ADR-0005).
 

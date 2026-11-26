@@ -99,6 +99,26 @@ It **degrades instead of failing**: HTTP 200 with the real `no2_ug_m3` and `inte
 - **Why `null` and not a fallback number** (the last prediction, or the measured value): a fabricated prediction looks real. `null` is unambiguous, and the dashboard shows "no prediction available".
 - **Same rule for the stores:** if Postgres is down, NO₂ is `null`; if S3 is down, intensity and prediction are `null`. Only when *neither* real value is available does the route return 503, because then nothing true is left to show.
 
+## Model history
+
+The analysis above is for the model as first trained on Day 4. Retraining is one command (`infra/retrain.ps1`):
+1. build the data on the VM;
+2. train in the pinned environment;
+3. run the full test suite, and stop if it fails;
+4. deploy;
+5. smoke-test the public `/site/hrl`.
+
+`ml/metrics.json` always describes the model that is currently deployed.
+
+| Trained | Rows | Traffic coef. (per 1,000 veh/h) | In-sample R² | LOO MAE (mean baseline) | Logistic trainable? |
+|---|---|---|---|---|---|
+| 26 Nov, Day 4 | 17 | +1.94 | 0.83 | 1.44 (3.28) | no, 0 exceedances |
+| 26 Nov, retrain test | 19 | +1.91 | 0.85 | 1.29 (3.39) | no, 0 exceedances |
+
+The traffic coefficient barely moves as rows are added. That is encouraging, but it is still the same single day. Retrain on the morning of Day 5 to roughly double the data.
+
+**A bug the retrain smoke test found:** `traffic-ingest` uploads the four site files one after another over about a minute. During that minute, the dashboard's "newest file per site" mixed two hours, so it refused to compute a total and showed no prediction. This happened after every deploy and for about a minute after every hourly cycle. The fix follows the training join: the dashboard now uses the **newest hour for which all four sites have a file**, and requires the four sites to share an NO₂ *hour* rather than an identical minute. A regression test covers the mid-upload state.
+
 ## Consequences
 
 **Easier:** the whole model fits in a sentence ("about 10.5 µg/m³ at night, plus 1.9 per 1,000 vehicles per hour"), so anyone can sanity-check it. Retraining is two commands (see `infra/day4-deploy.md`), and every model can be traced to its data.

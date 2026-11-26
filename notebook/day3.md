@@ -19,7 +19,7 @@
 
 | Lab item | Status |
 |---|---|
-| VM running in the cloud | ✅ `i-0dd1b70fd3b8badb5`, t3.small, eu-north-1c, 13.53.194.127 |
+| VM running in the cloud | ✅ `i-0dd1b70fd3b8badb5`, t3.small, eu-north-1c, 16.192.119.40 |
 | Both ingestion containers run on the VM | ✅ `air-ingest`, `traffic-ingest` (+ `db`), restart `unless-stopped`; came back by themselves after a reboot |
 | `sensor_readings` has real rows from today | ✅ 125 rows after the first cycle (incl. the laptop's Day 1–2 history), growing hourly |
 | ≥ 1 NDW CSV in the bucket | ✅ `s3://airbreda-raw-730631/ndw/2026-11-25/19-{hrl,hrr,vwd,vwa}.csv`, then 4 more per hour |

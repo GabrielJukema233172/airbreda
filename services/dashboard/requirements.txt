@@ -3,7 +3,7 @@
 # that wrote it.
 fastapi==0.115.5
 uvicorn==0.32.1
-anyio==4.6.2   # pinned: newer anyio deprecates APIs this Starlette version uses
+anyio==4.6.2.post1   # pinned: newer anyio deprecates APIs this Starlette version uses (4.6.2 itself was yanked)
 psycopg2-binary==2.9.10
 boto3==1.35.90
 pandas==2.2.3

@@ -3,7 +3,7 @@ AirBreda - Day 4: turn traffic into a predicted NO2 value and an exceedance risk
 
     from predict import predict
     predict(total_intensity_veh_per_hr=3600, hour_of_day=8)
-    # {"no2_ug_m3_predicted": 16.84, "no2_exceedance_risk": 0.164}   (model of 26 Nov, 17 rows)
+    # {"no2_ug_m3_predicted": ~17, "no2_exceedance_risk": ~0.16}   (exact values: see ml/metrics.json)
 
 The model (model.pkl, a scikit-learn LinearRegression trained by ml/train_model.py)
 is baked into the dashboard image next to this file, so the image always serves

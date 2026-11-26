@@ -64,6 +64,48 @@ def test_invalid_lane_means_no_total_and_no_prediction(client, monkeypatch):
     assert body["intensity_veh_per_hr"] == 2460.0
 
 
+def test_same_hour_different_minutes_still_gives_a_total(client, monkeypatch):
+    # a re-run within the hour rewrote one site a few minutes later: still the same NO2 hour
+    later = {**TRAFFIC, "hrl": {**TRAFFIC["hrl"], "measurement_time": SNAP.replace(minute=24)}}
+    monkeypatch.setattr(dashboard, "latest_traffic", lambda: later)
+    body = client.get("/site/vwd").json()
+    assert body["total_intensity_veh_per_hr"] == 5460.0 and body["no2_ug_m3_predicted"] is not None
+
+
+def test_sites_from_different_hours_give_no_total(client, monkeypatch):
+    mixed = {**TRAFFIC, "hrl": {**TRAFFIC["hrl"], "measurement_time": SNAP.replace(hour=8)}}
+    monkeypatch.setattr(dashboard, "latest_traffic", lambda: mixed)
+    body = client.get("/site/vwd").json()
+    assert body["total_intensity_veh_per_hr"] is None and body["no2_ug_m3_predicted"] is None
+
+
+class FakeS3:
+    """Hour 07 is complete; traffic-ingest is halfway through writing hour 08."""
+
+    def __init__(self):
+        self.files = {}
+        for hour, sites, flow in [("07", ["hrl", "hrr", "vwd", "vwa"], 100), ("08", ["hrl", "hrr"], 999)]:
+            for s in sites:
+                self.files[f"ndw/2026-11-26/{hour}-{s}.csv"] = (
+                    "site_label,site_id,measurement_time,index,measurement_type,vehicle_class,raw_value,value,is_valid\n"
+                    f"{s},x,2026-11-26T{hour}:09:00Z,1,flow,anyVehicle,{flow},{flow}.0,True\n")
+
+    def list_objects_v2(self, Bucket, Prefix):
+        return {"Contents": [{"Key": k} for k in self.files if k.startswith(Prefix)]}
+
+    def get_object(self, Bucket, Key):
+        import io
+        return {"Body": io.BytesIO(self.files[Key].encode())}
+
+
+def test_fetch_uses_newest_complete_hour_while_an_upload_is_in_progress(monkeypatch):
+    monkeypatch.setattr(dashboard, "_s3_client", lambda: FakeS3())
+    traffic = dashboard._fetch_latest_traffic(now=datetime(2026, 11, 26, 8, 10, tzinfo=timezone.utc))
+    assert {v["key"].split("/")[-1][:2] for v in traffic.values()} == {"07"}   # not a 07/08 mix
+    total, _, reason = dashboard.total_intensity(traffic)
+    assert total == 400.0 and reason is None
+
+
 def test_both_stores_down_is_503(client, monkeypatch):
     def down():
         raise ConnectionError("down")

@@ -1,30 +1,30 @@
 {
-  "trained_at": "2026-11-26T14:10:19+00:00",
-  "rows": 17,
+  "trained_at": "2026-11-26T15:26:10+00:00",
+  "rows": 19,
   "data_from": "2026-11-25T20:00:00+00:00",
-  "data_to": "2026-11-26T12:00:00+00:00",
+  "data_to": "2026-11-26T14:00:00+00:00",
   "features": [
     "total_intensity_veh_per_hr",
     "hour_of_day"
   ],
   "scikit_learn": "1.5.2",
   "coefficients": {
-    "total_intensity_veh_per_hr": 0.0019442195610093402,
-    "hour_of_day": -0.0845130578241836
+    "total_intensity_veh_per_hr": 0.0019109241445576023,
+    "hour_of_day": -0.08622753029036676
   },
-  "intercept": 10.516172408206398,
+  "intercept": 10.564733636227748,
   "in_sample": {
-    "r2": 0.8308290400966818,
-    "mae": 1.2057506090814338
+    "r2": 0.850905674777617,
+    "mae": 1.1060263097925906
   },
   "leave_one_out": {
-    "mae_linear": 1.4417866880361618,
-    "mae_traffic_only": 1.4518033249452633,
-    "mae_baseline_mean": 3.278455882352941
+    "mae_linear": 1.2890647913063198,
+    "mae_traffic_only": 1.3045797978276277,
+    "mae_baseline_mean": 3.3900000000000006
   },
   "traffic_only_model": {
-    "coefficient": 0.0018931894071752373,
-    "r2_in_sample": 0.8009103817677852
+    "coefficient": 0.0018434724332995606,
+    "r2_in_sample": 0.823440288271859
   },
   "no2_range": [
     8.9,
@@ -33,6 +33,6 @@
   "exceedance_threshold_ug_m3": 25.0,
   "logistic_regression": {
     "trained": false,
-    "reason": "0 of 17 hours exceed 25.0 µg/m³: a classifier needs examples of both classes"
+    "reason": "0 of 19 hours exceed 25.0 µg/m³: a classifier needs examples of both classes"
   }
 }

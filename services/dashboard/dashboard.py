@@ -25,8 +25,9 @@ Where each field of GET /site/{site_id} comes from (required comment)
   timestamp                     the measurement time inside that CSV (when NDW measured
                                 the traffic), i.e. the moment the prediction is about.
   total_intensity_veh_per_hr    the same S3 step for all four sites, summed. Only set
-                                when all four files come from the same snapshot and
-                                have no invalid (-1) flow lane.
+                                when all four files come from the same hour (the
+                                newest complete hour is used) and have no invalid
+                                (-1) flow lane.
   prediction_for_hour           common.features.no2_hour_for(timestamp): the Luchtmeetnet
                                 hour the prediction will be compared with once published.
   no2_ug_m3_predicted,          predict.predict(total_intensity_veh_per_hr, hour_of_day):
@@ -119,27 +120,38 @@ def _s3_client():
 
 
 def _fetch_latest_traffic(now: datetime | None = None) -> dict[str, dict | None]:
-    """{site: {"intensity", "measurement_time", "key"} or None} from the newest CSV per site.
+    """{site: {"intensity", "measurement_time", "key"} or None}.
 
-    Keys are ndw/YYYY-MM-DD/HH-<site>.csv, so the newest is the lexicographic
-    maximum; today's and yesterday's folders are enough (the VM writes hourly).
+    Files are ndw/YYYY-MM-DD/HH-<site>.csv. We use the newest HOUR for which all
+    four sites have a file, not simply the newest file per site: traffic-ingest
+    uploads the four files one after another during a ~1-minute cycle, and in
+    that minute the newest files would mix two hours (and the total would be
+    meaningless). Only if no hour is complete does a site fall back to its own
+    newest file. Today's and yesterday's folders are enough (the VM writes hourly).
     """
     s3 = _s3_client()
     now = now or datetime.now(timezone.utc)
-    keys: dict[str, list[str]] = {}
+    by_hour: dict[str, dict[str, str]] = {}               # "ndw/2026-11-26/12" -> {site: key}
     for day in (now, now - timedelta(days=1)):
         resp = s3.list_objects_v2(Bucket=BUCKET, Prefix=f"ndw/{day:%Y-%m-%d}/")
         for obj in resp.get("Contents", []):
-            name = obj["Key"].rsplit("/", 1)[-1].removesuffix(".csv")   # "12-hrl"
-            site = name.split("-", 1)[-1]
+            folder, name = obj["Key"].rsplit("/", 1)
+            hour, _, site = name.removesuffix(".csv").partition("-")   # "12", "hrl"
             if site in SITES:
-                keys.setdefault(site, []).append(obj["Key"])
+                by_hour.setdefault(f"{folder}/{hour}", {})[site] = obj["Key"]
+    complete = [h for h, sites in by_hour.items() if len(sites) == len(SITES)]
+    if complete:
+        chosen = by_hour[max(complete)]
+    else:
+        chosen = {}
+        for hour in sorted(by_hour):                       # oldest -> newest: newest wins per site
+            chosen.update(by_hour[hour])
     result: dict[str, dict | None] = {}
     for site in SITES:
-        if not keys.get(site):
+        key = chosen.get(site)
+        if key is None:
             result[site] = None
             continue
-        key = max(keys[site])
         rows = parse_ndw_csv(s3.get_object(Bucket=BUCKET, Key=key)["Body"].read().decode("utf-8"))
         result[site] = {"intensity": site_intensity(rows), "measurement_time": measurement_time(rows), "key": key}
     return result
@@ -160,13 +172,15 @@ def total_intensity(traffic: dict[str, dict | None]) -> tuple[float | None, date
     if any(traffic.get(s) is None for s in SITES):
         return None, None, "total intensity unavailable: no recent file for " + \
             ", ".join(s for s in SITES if traffic.get(s) is None)
-    times = {traffic[s]["measurement_time"] for s in SITES}
-    if len(times) != 1:
-        return None, None, "total intensity unavailable: the four sites' latest files are from different snapshots"
+    # Same rule as the training join: the model's unit is the NO2 HOUR, so the four
+    # sites must fall in the same hour (the minute may differ if a cycle re-ran).
+    times = [traffic[s]["measurement_time"] for s in SITES]
+    if len({no2_hour_for(t) for t in times}) != 1:
+        return None, None, "total intensity unavailable: the four sites' latest files are from different hours"
     invalid = [s for s in SITES if traffic[s]["intensity"] is None]
     if invalid:
         return None, None, "total intensity unavailable: invalid (-1) flow lane at " + ", ".join(invalid)
-    return sum(traffic[s]["intensity"] for s in SITES), times.pop(), None
+    return sum(traffic[s]["intensity"] for s in SITES), max(times), None
 
 
 # --------------------------------------------------------------------------- #
