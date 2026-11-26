@@ -82,10 +82,10 @@ docker compose restart air-ingest          # a restart runs a cycle immediately
 ## 5. Tests
 
 ```powershell
-docker run --rm -v "${PWD}:/app" -w /app python:3.12-slim sh -c "pip install -q pytest pandas requests redis && pytest"
+docker run --rm -v "${PWD}:/app" -w /app python:3.12-slim sh -c "pip install -q -r requirements-dev.txt && pytest"
 ```
 
-Expect `25 passed`.
+Expect `25 passed` on Day 2 (`47 passed` since Day 4 added the model and dashboard tests).
 
 ## 6. Stop
 

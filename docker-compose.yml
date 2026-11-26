@@ -90,6 +90,31 @@ services:
     networks: [airbreda]
     restart: unless-stopped
 
+  # Day 4: test the dashboard next to the ingesters BEFORE it goes to the VM.
+  #   docker compose up -d --build   then open http://localhost:8000
+  # It reads NO2 from the local db and traffic from the REAL bucket (S3_BUCKET
+  # in .env), with your laptop's AWS credentials, read-only mounted.
+  dashboard:
+    build:
+      context: .
+      dockerfile: services/dashboard/Dockerfile
+    container_name: dashboard
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://airbreda:${POSTGRES_PASSWORD}@db:5432/airbreda
+      AWS_REGION: eu-north-1
+      AIR_HEALTH_URL: http://air-ingest:8000/health
+      TRAFFIC_HEALTH_URL: http://traffic-ingest:8000/health
+    volumes:
+      - ${AWS_CONFIG_DIR:-~/.aws}:/root/.aws:ro
+    ports:
+      - "127.0.0.1:8000:8000"   # GET /, /site/{id}, /health
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [airbreda]
+    restart: unless-stopped
+
 networks:
   airbreda:
     name: airbreda   # fixed name, so `docker network ls` shows exactly "airbreda"

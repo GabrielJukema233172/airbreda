@@ -1,0 +1,3 @@
+# Training environment = the dashboard's serving environment + plotting.
+-r ../services/dashboard/requirements.txt
+matplotlib==3.9.2

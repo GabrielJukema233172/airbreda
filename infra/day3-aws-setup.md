@@ -10,7 +10,7 @@ All laptop commands are **PowerShell**, run from the `airbreda` folder. Commands
 | Region | **eu-north-1** (Stockholm) | The only region the account's organization policy (SCP) allows for EC2/RDS |
 | EC2 instance | `airbreda-vm` · `i-0dd1b70fd3b8badb5` · **13.53.194.127** | t3.small, Amazon Linux 2023, 20 GB gp3, termination protection on, CPU credits *standard* |
 | Key pair | `airbreda-day3` → `C:\Users\gabri\.ssh\airbreda-day3.pem` | ed25519; readable only by you. Never commit it (`*.pem` is git-ignored) |
-| Security group | `airbreda-vm-sg` · `sg-00f41cf700c384efa` | Inbound **TCP 22 from 86.80.42.249/32 only** |
+| Security group | `airbreda-vm-sg` · `sg-00f41cf700c384efa` | Inbound **TCP 22**, and from Day 4 **TCP 8000** (dashboard), from the owner's two IPs only: 86.80.42.249/32 and 145.101.245.100/32 |
 | S3 bucket | `airbreda-raw-730631` | Public access blocked; `ndw/…` raw CSVs, `backups/postgres/…` nightly dumps |
 | IAM role | `airbreda-ec2-role` (+ instance profile `airbreda-ec2-profile`) | Inline policy [`aws/airbreda-s3-policy.json`](aws/airbreda-s3-policy.json): Put/Get on `ndw/*` and `backups/*` only |
 | Budget | `airbreda-monthly` | $11 (≈ €10)/month, email at 80% actual and 100% forecast |

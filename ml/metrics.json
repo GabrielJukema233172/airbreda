@@ -1,0 +1,38 @@
+{
+  "trained_at": "2026-11-26T14:10:19+00:00",
+  "rows": 17,
+  "data_from": "2026-11-25T20:00:00+00:00",
+  "data_to": "2026-11-26T12:00:00+00:00",
+  "features": [
+    "total_intensity_veh_per_hr",
+    "hour_of_day"
+  ],
+  "scikit_learn": "1.5.2",
+  "coefficients": {
+    "total_intensity_veh_per_hr": 0.0019442195610093402,
+    "hour_of_day": -0.0845130578241836
+  },
+  "intercept": 10.516172408206398,
+  "in_sample": {
+    "r2": 0.8308290400966818,
+    "mae": 1.2057506090814338
+  },
+  "leave_one_out": {
+    "mae_linear": 1.4417866880361618,
+    "mae_traffic_only": 1.4518033249452633,
+    "mae_baseline_mean": 3.278455882352941
+  },
+  "traffic_only_model": {
+    "coefficient": 0.0018931894071752373,
+    "r2_in_sample": 0.8009103817677852
+  },
+  "no2_range": [
+    8.9,
+    21.08
+  ],
+  "exceedance_threshold_ug_m3": 25.0,
+  "logistic_regression": {
+    "trained": false,
+    "reason": "0 of 17 hours exceed 25.0 µg/m³: a classifier needs examples of both classes"
+  }
+}

@@ -21,6 +21,9 @@ data/
 *.parquet
 *.pkl
 *.joblib
+# ...except the deployed model: it is baked into the dashboard image and committed
+# together with the exact data it was trained on (ml/training_data.csv) and its metrics.
+!services/dashboard/model.pkl
 
 # OS / editor
 .DS_Store

@@ -1,0 +1,50 @@
+flowchart LR
+    subgraph SRC["Open data sources (public internet)"]
+        LMN["RIVM Luchtmeetnet API<br/>NO₂ · NL10240 · hourly"]
+        NDW["NDW Open Data<br/>4 A27 sites · per minute"]
+    end
+
+    USER["Browser / grader<br/>GET / · /site/{id} · /health"]
+    DEV["Developer laptop<br/>SSH · local docker compose<br/>ml/train_model.py"]
+
+    subgraph AWS["AWS · eu-north-1 (Stockholm)"]
+        IAM{{"IAM role airbreda-ec2-role (narrowed)<br/>Put/Get: ndw/* and backups/* only<br/>List: those prefixes only · no Delete"}}
+
+        subgraph SG["Security group airbreda-vm-sg<br/>inbound TCP 22 + 8000 from owner IPs only"]
+            subgraph VM["EC2 t3.small · Amazon Linux 2023 · Docker · restart unless-stopped"]
+                subgraph NET["Docker network 'airbreda'"]
+                    AIR["air-ingest<br/>hourly · last 50 h<br/>flag stale/null"]
+                    TRF["traffic-ingest<br/>hourly · skip -1"]
+                    DB[("db · PostgreSQL 16<br/>sensor_readings<br/>roles: airbreda (owner)<br/>dashboard_ro (SELECT only)")]
+                    DASH["dashboard · FastAPI :8000<br/>GET / (HTML, refresh 60 s)<br/>GET /site/{id} · GET /health<br/>predict.py + model.pkl (baked in)"]
+                end
+                CRON["cron 02:15 UTC<br/>pg_dump → S3"]
+            end
+        end
+
+        S3[("S3 airbreda-raw-730631<br/>ndw/YYYY-MM-DD/HH-site.csv<br/>backups/postgres/*.sql.gz")]
+    end
+
+    MODEL[/"model.pkl · LinearRegression<br/>NO₂ ≈ 10.5 + 0.0019 × total veh/h − 0.08 × hour<br/>trained on 17 joined hours"/]
+
+    LMN --> AIR
+    NDW --> TRF
+    AIR -- "upsert" --> DB
+    TRF -- "flow + speed totals" --> DB
+    TRF -- "raw CSV" --> S3
+    CRON --> S3
+
+    DB -- "latest NO₂ (SELECT)" --> DASH
+    S3 -- "latest CSV per site<br/>(List + Get, cached 60 s)" --> DASH
+    AIR -. "/health :8000" .-> DASH
+    TRF -. "/health :8000" .-> DASH
+    USER -- "HTTP :8000" --> DASH
+
+    DB -. "training: NO₂ per hour" .-> DEV
+    S3 -. "training: CSVs" .-> DEV
+    DEV -. "train → baked into image<br/>at docker build" .-> MODEL
+    MODEL -. "loaded by predict()" .-> DASH
+    IAM -. "credentials via IMDSv2" .-> VM
+
+    classDef offline stroke-dasharray: 5 5,color:#555;
+    class MODEL offline

@@ -21,13 +21,25 @@ Both ingesters run continuously (hourly) and publish to a shared Redis queue alo
 
 What actually runs today: one EC2 `t3.small` in **eu-north-1** (the only region the account allows), with three containers on a Docker network: PostgreSQL, `air-ingest` and `traffic-ingest`. The ingesters write **directly** to Postgres and to S3; the Day 2 Redis queue is not deployed (ADR-0004). Only SSH from the developer's IP is open. The VM reaches S3 with an IAM role scoped to `ndw/*` and `backups/*`, with no access keys on the machine. A nightly cron job dumps the database to S3, and the restore has been tested.
 
+### Day 4 — full AirBreda: model + dashboard
+![AirBreda architecture after Day 4](diagrams/day4-architecture.svg)
+
+A third application container, `dashboard` (FastAPI), joins the ingesters on the same VM. It serves `GET /` (HTML), `GET /site/{id}` and an aggregated `GET /health` on port 8000, which is open to the owner's IPs only. Each request reads:
+- the latest NO₂ from Postgres, through a SELECT-only login;
+- the latest traffic per site from S3, through the narrowed IAM role;
+- a prediction from `model.pkl`, a linear regression trained offline on 17 joined hours and baked into the image.
+
+The HTML page is a client of `/site/{id}`. If the model fails, the API still returns the measured values (ADR-0006).
+
 ## 3. Architecture Decision Records
 | # | Decision | Status |
 |---|---|---|
 | [0001](adr/0001-initial-data-storage-strategy.md) | Initial data storage strategy: PostgreSQL in a container + S3, idempotent writes | Accepted |
 | [0002](adr/0002-messaging-architecture.md) | Messaging architecture: Redis queue alongside direct writes; flag vs drop bad data | Accepted |
 | [0003](adr/0003-resilience-strategy.md) | Resilience strategy: 99% SLO for `/site/{id}`, Backup & Restore | Accepted (region amended by 0004) |
-| [0004](adr/0004-compute-strategy.md) | Compute strategy: one EC2 t3.small in eu-north-1, `docker run` + restart policy, IAM role, no queue on the VM | Accepted |
+| [0004](adr/0004-compute-strategy.md) | Compute strategy: one EC2 t3.small in eu-north-1, `docker run` + restart policy, IAM role, no queue on the VM | Accepted (extended by 0005) |
+| [0005](adr/0005-compute-and-deployment-strategy.md) | Compute & deployment: dashboard as a third container on the same VM, read-only DB login, local Compose test | Accepted |
+| [0006](adr/0006-ml-serving-architecture.md) | ML serving: linear regression baked into the dashboard image, sigmoid risk at 25 µg/m³, degrade when the model fails | Accepted |
 
 ## 4. Cloud provider rationale (for the municipality)
 _Plain-language explanation of why AWS, written for a non-technical reader._
