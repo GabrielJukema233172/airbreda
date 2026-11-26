@@ -1,5 +1,5 @@
-# AirBreda - all services on one Docker host.
-# Day 1-2: your laptop. Day 3: the same file on the EC2 VM.
+# AirBreda - all services on one Docker host (Day 1-2, laptop).
+# Day 3: the EC2 VM does NOT use this file; it runs infra/vm/deploy.sh (no Redis, ADR-0004).
 #
 #   docker compose up -d --build     # start everything; ingesters poll hourly
 #   docker compose ps                # all services should become "healthy"
@@ -74,7 +74,7 @@ services:
     environment:
       DATABASE_URL: postgresql://airbreda:${POSTGRES_PASSWORD}@db:5432/airbreda
       REDIS_HOST: redis
-      AWS_REGION: eu-central-1
+      AWS_REGION: eu-north-1   # the only region the account allows (ADR-0004)
       POLL_INTERVAL_SECONDS: ${TRAFFIC_POLL_INTERVAL_SECONDS:-3600}
     volumes:
       # Laptop only: lend the container your AWS CLI credentials, read-only.

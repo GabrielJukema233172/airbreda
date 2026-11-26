@@ -2,7 +2,9 @@
 
 Cloud platform that ingests live NO₂ readings (RIVM Luchtmeetnet, station NL10240 Breda-Tilburgseweg) and live traffic counts (NDW, four A27 sites near hectometer 63), stores and processes them, and serves a regression model that predicts NO₂ near the A27 interchange.
 
-Built for the System Design & Cloud Platforms elective (ADSAI, BUas). Cloud provider: **AWS** (region eu-central-1).
+Built for the System Design & Cloud Platforms elective (ADSAI, BUas). Cloud provider: **AWS** (region eu-north-1, Stockholm: the only region the account's organization policy allows; see ADR-0004).
+
+Since Day 3 the stack runs on an EC2 VM: see [infra/day3-aws-setup.md](infra/day3-aws-setup.md).
 
 ## Repository layout
 
@@ -11,7 +13,9 @@ Built for the System Design & Cloud Platforms elective (ADSAI, BUas). Cloud prov
 | `services/common/` | Shared code: JSON logging, data-quality counters, `/health`, Postgres upsert, Redis publisher |
 | `services/air/` | `ingest_air.py` + Dockerfile: Luchtmeetnet NO₂ → PostgreSQL + Redis, `/health` on :8001 |
 | `services/traffic/` | `ingest_traffic.py` + Dockerfile: NDW traffic → CSV/S3 + PostgreSQL + Redis, `/health` on :8002 |
-| `docker-compose.yml` | Postgres, Redis and both ingestion services on one Docker host (laptop now, EC2 VM from Day 3) |
+| `docker-compose.yml` | Day 2 local setup: Postgres, Redis and both ingestion services on the laptop |
+| `infra/vm/` | Day 3 VM deployment: `deploy.sh` (plain `docker run`, no Redis), `backup.sh` (nightly `pg_dump` → S3), `env.example` |
+| `infra/aws/` | IAM trust and S3 policies for the VM's instance role |
 | `tests/` | pytest suite (`pytest` from the repo root) |
 | `sql/` | Database schema |
 | `infra/` | Step-by-step setup and run commands |

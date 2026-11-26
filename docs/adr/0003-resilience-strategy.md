@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-24
 - **Course day:** Day 2
+- **Amended by:** ADR-0004. The deployment runs in **eu-north-1** (Stockholm), not eu-central-1: the account's organization policy denies every other region. Stockholm prices are ~10% lower (t3.small $0.0216/h), and the reasoning below is unchanged. The nightly `pg_dump` → S3 and a restore test were completed on Day 3.
 
 ## Context
 

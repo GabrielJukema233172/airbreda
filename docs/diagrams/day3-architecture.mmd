@@ -1,0 +1,50 @@
+flowchart LR
+    subgraph SRC["Open data sources (public internet)"]
+        LMN["RIVM Luchtmeetnet API<br/>NO₂ · NL10240 · hourly"]
+        NDW["NDW Open Data<br/>4 A27 sites · per minute"]
+    end
+
+    DEV["Developer laptop<br/>SSH key airbreda-day3"]
+
+    subgraph AWS["AWS · eu-north-1 (Stockholm) · only region the account's SCP allows"]
+        IAM{{"IAM role airbreda-ec2-role<br/>(instance profile)<br/>s3:PutObject/GetObject on ndw/* + backups/*<br/>no access keys on the VM"}}
+
+        subgraph VPC["Default VPC · public subnet eu-north-1c"]
+            subgraph SG["Security group airbreda-vm-sg · inbound: TCP 22 from owner IP only"]
+                subgraph VM["EC2 t3.small · Amazon Linux 2023 · 2 GB RAM · 20 GB gp3 · termination protection"]
+                    subgraph NET["Docker network 'airbreda' · restart unless-stopped"]
+                        AIR["air-ingest<br/>loop: every hour<br/>last 50 h · flag stale/null"]
+                        TRF["traffic-ingest<br/>loop: every hour<br/>skip -1 values"]
+                        DB[("db · PostgreSQL 16<br/>sensor_readings<br/>volume airbreda_pgdata<br/>no published port")]
+                    end
+                    H(["GET /health<br/>127.0.0.1:8001 · :8002<br/>(VM only)"])
+                    CRON["cron 02:15 UTC<br/>backup.sh → pg_dump"]
+                    IMDS["Instance metadata (IMDSv2)<br/>temporary role credentials"]
+                end
+            end
+        end
+
+        S3[("S3 · airbreda-raw-730631<br/>ndw/YYYY-MM-DD/HH-site.csv<br/>backups/postgres/YYYY-MM-DD.sql.gz<br/>public access blocked")]
+        BUD["AWS Budget $11/month<br/>email at 80% actual / 100% forecast"]
+    end
+
+    subgraph GONE["Not deployed on the VM (ADR-0004)"]
+        REDIS[["Redis queue 'readings'<br/>(Day 2, laptop only)"]]
+    end
+
+    LMN -- "HTTPS, outbound" --> AIR
+    NDW -- "HTTP, outbound" --> TRF
+    AIR -- "upsert over Docker network<br/>db:5432" --> DB
+    TRF -- "flow + speed totals" --> DB
+    TRF -- "raw CSV over HTTPS<br/>(S3 public endpoint)" --> S3
+    CRON -- "dump" --> DB
+    CRON -- "gzip upload" --> S3
+    IAM -. "assumed by" .-> IMDS
+    IMDS -. "credentials" .-> TRF
+    IMDS -. "credentials" .-> CRON
+    AIR -.-> H
+    TRF -.-> H
+    DEV -- "SSH :22" --> VM
+
+    classDef gone stroke-dasharray: 5 5,color:#888,fill:#f4f4f4;
+    class REDIS gone

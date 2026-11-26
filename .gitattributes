@@ -1,0 +1,2 @@
+# Shell scripts run on Linux (the EC2 VM): always LF line endings
+*.sh text eol=lf

@@ -1,8 +1,9 @@
 # Day 1 — setup and run steps
 
 > **Superseded for running the stack:** from Day 2 the services are called `air-ingest` and
-> `traffic-ingest` and run continuously. Use [day2-run.md](day2-run.md). The S3 bucket
-> steps below are still valid.
+> `traffic-ingest` and run continuously. Use [day2-run.md](day2-run.md).
+> **Region:** use `eu-north-1`, not `eu-central-1`. The account only allows Stockholm.
+> The bucket in use is `airbreda-raw-730631`, created on Day 3 ([day3-aws-setup.md](day3-aws-setup.md)).
 
 All commands are **PowerShell**, run from the **`airbreda`** folder
 (`cd "C:\Users\gabri\Downloads\Elective 2\airbreda"`).

@@ -1,4 +1,5 @@
 requests==2.32.3
 pandas==2.2.3
+numpy==2.1.3   # pinned: newer numpy makes pandas 2.2.3 emit DeprecationWarnings (future errors)
 psycopg2-binary==2.9.10
 redis==5.2.1
