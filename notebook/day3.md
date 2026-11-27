@@ -7,7 +7,7 @@
 
 | Lab item | Status |
 |---|---|
-| CLI authenticated | ✅ `aws sts get-caller-identity` → user `Gabriel-Admin`, account 702764210355 |
+| CLI authenticated | ✅ `aws sts get-caller-identity` → the admin IAM user of the course account |
 | Docker Desktop running | ✅ |
 | `ingest_air.py` writes to `sensor_readings` | ✅ (reads the Luchtmeetnet JSON API, not a CSV) |
 | `ingest_traffic.py` saves `ndw/YYYY-MM-DD/HH-site.csv` | ✅ locally and to S3 |

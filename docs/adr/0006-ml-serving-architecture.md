@@ -121,7 +121,7 @@ The traffic coefficient barely moves as rows are added. That is encouraging, but
 
 ## Consequences
 
-**Easier:** the whole model fits in a sentence ("about 10.5 µg/m³ at night, plus 1.9 per 1,000 vehicles per hour"), so anyone can sanity-check it. Retraining is two commands (see `infra/day4-deploy.md`), and every model can be traced to its data.
+**Easier:** the whole model fits in a sentence ("about 10.5 µg/m³ at night, plus 1.9 per 1,000 vehicles per hour"), so anyone can sanity-check it. Retraining is one command (`infra/retrain.ps1`, see `docs/runbook.md` §5), and every model can be traced to its data.
 
 **Harder / to revisit:**
 1. **It is a nowcast, not a forecast.** The case study asks for exceedance risk *in the next hour*. Today's model predicts the NO₂ of the hour the traffic was measured in. That is still useful, because Luchtmeetnet publishes that hour 30–90 minutes later, but it doesn't look ahead. A real forecast needs a target of NO₂(t+1) from traffic(t) and NO₂(t). With the data we have now, that would mean even fewer rows.

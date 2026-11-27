@@ -1,7 +1,8 @@
-# AirBreda - all services on one Docker host (Day 1-2, laptop).
-# Day 3: the EC2 VM does NOT use this file; it runs infra/vm/deploy.sh (no Redis, ADR-0004).
+# AirBreda - LOCAL development stack: db, redis, both ingesters and the dashboard.
+# The EC2 VM does NOT use this file: it runs infra/vm/deploy.sh (no Redis, ADR-0004).
+# See docs/runbook.md section 3.
 #
-#   docker compose up -d --build     # start everything; ingesters poll hourly
+#   docker compose up -d --build     # start everything; ingesters poll hourly, dashboard on :8000
 #   docker compose ps                # all services should become "healthy"
 #   docker compose logs -f air-ingest traffic-ingest   # structured JSON logs
 #   curl http://localhost:8001/health   # air-ingest    (PowerShell: curl.exe)

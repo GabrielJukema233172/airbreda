@@ -31,7 +31,7 @@ Facts that shape the choice:
 
 ### Why a VM instead of a managed container service (for today)
 - **Our database lives on it.** ADR-0001 put Postgres in a container to avoid RDS's bill and networking. A managed container service would force the database move now, adding a second paid service and a VM↔DB network path to secure, for a workload of ten rows an hour.
-- **Lowest total effort for one engineer.** One machine, one SSH key, one script. Every moving part is visible with `docker ps` and `docker logs`, and the whole deployment is reproducible from `infra/day3-aws-setup.md`.
+- **Lowest total effort for one engineer.** One machine, one SSH key, one script. Every moving part is visible with `docker ps` and `docker logs`, and the whole deployment is reproducible from the runbook (`docs/runbook.md`).
 - **Cost:** it runs on the Free plan credit, and the bill is fixed and predictable (see below), not per invocation.
 - **What we give up:** OS patching, Docker upgrades, disk space and recovery are our job (IaaS). ADR-0003 already accepts the single point of failure for a 99% SLO.
 
@@ -99,7 +99,7 @@ In both cases it returns as **Amazon SQS** (with SNS for fan-out), not Redis. Co
 
 **Harder / to revisit:**
 - OS and Docker patching is manual (`sudo dnf update`). Revisit with automatic security updates or SSM Patch Manager. SSM needs an instance-management role this account doesn't have yet (seen in the boot log).
-- SSH from a single home IP: if that IP changes, the security group rule has to be updated (`infra/day3-aws-setup.md`). EC2 Instance Connect or SSM Session Manager would remove the open port entirely.
+- SSH from a single home IP: if that IP changes, the security group rule has to be updated (`docs/runbook.md` §7). EC2 Instance Connect or SSM Session Manager would remove the open port entirely.
 - The Day 4 API will need one more inbound rule (its port, ideally behind HTTPS). That is the first part of the system exposed to the public internet.
 - **The public IP is not fixed.** Stopping and starting the VM releases its auto-assigned IPv4 address and gives it a new one, and the Day 5 deliverable is "reachable at its public IP". Before Day 5, attach an Elastic IP (same $0.005/h while in use). **Done 26 Nov:** Elastic IP 16.192.119.40. Caveat: unlike the auto-assigned address, it keeps billing while the VM is stopped, so it must be released when the project ends.
 - After the course: **stop** the VM (the disk and the data survive; ≈ $1.67/month for the disk only), or snapshot it and terminate (termination protection has to be switched off first).

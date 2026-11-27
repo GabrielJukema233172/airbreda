@@ -4,7 +4,7 @@
 #   .\infra\retrain.ps1               # build data on VM -> train -> test -> deploy
 #   .\infra\retrain.ps1 -SkipDeploy   # stop after the tests (inspect ml\metrics.json first)
 #
-# Steps (the Day 4 flow, see infra/day4-deploy.md and ADR-0006):
+# Steps (the Day 4 flow, see docs/runbook.md section 5 and ADR-0006):
 #   1. ship code to the VM, build ml/training_data.csv there (the database is on the VM)
 #   2. copy the CSV back, train in the pinned environment (same scikit-learn as the dashboard)
 #   3. run the full test suite - a model that breaks tests/test_model.py is never deployed

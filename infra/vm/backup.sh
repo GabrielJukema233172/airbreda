@@ -3,7 +3,7 @@
 #
 #   pg_dump of the airbreda database -> gzip -> s3://$S3_BUCKET/backups/postgres/YYYY-MM-DD.sql.gz
 #
-# Runs from ec2-user's crontab (see infra/day3-aws-setup.md). Cron has a minimal
+# Runs from ec2-user's crontab (see docs/runbook.md section 6). Cron has a minimal
 # PATH, so every command is called by its absolute path. S3 access comes from
 # the VM's IAM role; the role may only write under backups/ and ndw/.
 #
